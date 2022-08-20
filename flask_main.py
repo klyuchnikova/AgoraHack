@@ -1,22 +1,26 @@
 from flask import Flask, request
 from model.model import ProductModel, TextVectorizer
 from model.preprocessor import Preprocessor
+from model.utils import make_prediction
+from model.utils import DataLoader
 import time
+import os
+
+PROJECT_PATH = os.path.dirpath(os.path.abspath(__file__))
 
 app = Flask(__name__)
 text_vectorizer = TextVectorizer() # vocab?
-model = ProductModel(text_vectorizer, threshold = 0.2)
+loader = DataLoader(csv_path = os.path.join(PROJECT_PATH, "data//products//processed_data.csv"),
+                    class_ids_path = os.path.join(PROJECT_PATH, "data//products//classes.csv"))
+number_classes = loader.number_classes
+number_features = loader.number_features
+model = ProductModel("model_v0", number_classes, number_features, threshold = 0.2)
 preprocessor = Preprocessor()
-
-def make_prediction(preprocessor, model, products):
-    preprocessed_data = preprocessor.preprocess(products)
-    model_predictions = model.predict(preprocessed_data)
-
 
 @app.route('/match_products', methods=['POST'])
 def predict_product():
     print(f'{time.time()}: start matching products')
-    predictions = make_prediction(request.form)
+    predictions = make_prediction(preprocessor, model, loader, request.form)
     return [{"id" : product.get("id"), "reference_id": predictions[i]} for i,product in enumerate(request.form)]
 
 @app.route('/api/train_new', methods=['GET'])
