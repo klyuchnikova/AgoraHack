@@ -1,9 +1,11 @@
 import os
-
 import numpy as np
-import torch.nn as nn
+from keras.models import load_model
 from keras.preprocessing.text import Tokenizer
-from keras.preprocessing.sequence import pad_sequance
+from keras_preprocessing.sequence import pad_sequences
+from keras.models import Sequential
+from keras.layers import Dense, Flatten, Conv2D
+from keras.layers import Embedding
 
 
 class BasicKerasModel:
@@ -12,7 +14,7 @@ class BasicKerasModel:
     def __init__(self, file_name, threshold=0.2):
         print(self.DIR_PATH)
         self.model_file = os.path.join(self.DIR_PATH, file_name)
-        self.model = keras.models.load_model(self.model_file)
+        self.model = load_model(self.model_file)
         self.threshold = threshold
 
     def forward(self, X):
@@ -23,6 +25,8 @@ class BasicKerasModel:
         predictions = np.argmax(self.forward(X), axis=1)
         return np.where(predictions > self.threshold, predictions, None)
 
+"""
+import torch.nn as nn
 class ProductModel(nn.Module):
     DIR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.path.normpath("..//data//models"))
 
@@ -64,7 +68,7 @@ class ProductModel(nn.Module):
         # output: (batch_size, 1) -> class id or None
         predictions = np.argmax(self.forward(X), axis=1)
         return np.where(predictions > self.threshold, predictions, None)
-
+"""
 
 class TextVectorizer:
     def __init__(self):
