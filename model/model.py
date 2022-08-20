@@ -2,13 +2,33 @@ import os
 
 import numpy as np
 import torch.nn as nn
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequance
 
+
+class BasicKerasModel:
+    DIR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.path.normpath("..//data//models"))
+
+    def __init__(self, file_name, threshold=0.2):
+        print(self.DIR_PATH)
+        self.model_file = os.path.join(self.DIR_PATH, file_name)
+        self.model = keras.models.load_model(self.model_file)
+        self.threshold = threshold
+
+    def forward(self, X):
+        return self.model(X)
+
+    def predict(self, X):
+        # output: (batch_size, 1) -> class id or None
+        predictions = np.argmax(self.forward(X), axis=1)
+        return np.where(predictions > self.threshold, predictions, None)
 
 class ProductModel(nn.Module):
-    DIR_PATH = os.path.join(os.getcwd(), "../data/models/")
+    DIR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.path.normpath("..//data//models"))
 
     def __init__(self, file_name, input_size, number_classes, vocab_size, threshold=0.2):
         # weight_file must be simply name, path to dir is defined
+        self.model_file = os.path.join(ProductModel.DIR_PATH, file_name)
         super(ProductModel, self).__init__()
         self.input_size = input_size
         self.output_size = number_classes
@@ -38,7 +58,6 @@ class ProductModel(nn.Module):
         # input: np.ndarray (batch_size, input_size)
         # X is ALREADY vectorized and tokenized
         # output : vector (batch_size, number_classes)
-        self.X =
         pass
 
     def predict(self, X):

@@ -2,10 +2,14 @@ import csv
 import json
 import os
 import re
+import re
 
 import numpy as np
 import pandas as pd
-import sklearn.preprocessing
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from torch.utils.data import DataLoader
+from torchtext.data.functional import to_map_style_dataset
+from torchtext.vocab import build_vocab_from_iterator
 
 
 def basic_cleaning(s):
@@ -56,8 +60,9 @@ class Preprocessor:
             "name": "Название товара3",
             "props": [...]
           }, ...]"""
-        products = self.clean_data(products)
-        return pd.DataFrame()  # ready for model
+        products = pd.json_normalize(products)
+        products["props"] = str(products["props"])
+        return products.to_numpy()
 
     def dataset_to_csv(self, in_path, out_path):
         # output: data with columns, target column class with class numbers, array where [i] -> name of class number i
@@ -95,22 +100,45 @@ class Preprocessor:
     def encode_classes(self, data):
         return pd.DataFrame(data["reference_id"].dropna().unique())
 
-    def transform_classes(self, data, out_class_path, out_data_path):
+    def transform_classes(self, data, out_class_path):
         out_class_path = os.path.join(self.DIR_PATH, os.path.normpath(out_class_path))
-        out_data_path = os.path.join(self.DIR_PATH, os.path.normpath(out_data_path))
         classes_list = self.encode_classes(data)
         classes_list["id"] = np.arange(0, classes_list.shape[0])
         classes_list = classes_list.rename(columns={0: "reference_id"})
         classes_list.to_csv(out_class_path, index=False)
         classes_list = dict(classes_list.to_numpy().tolist())
-        data["reference_id"] = data["reference_id"].apply(lambda c: classes_list[c])
-        data.to_csv(out_data_path, index=False)
+        # data["reference_id"] = data["reference_id"].apply(lambda c: classes_list[c])
+
+    def create_vectorizer(self):
+        data = pd.read_csv("..//data//products//cleaned_data.csv")
+        data.drop(columns=["Unnamed: 0"], inplace=True)
+        vocab = create_vocab(data)
+        self.text_pipeline = lambda x: vocab(x.split())
+        self.label_pipeline = lambda x: int(x) - 1
+        self.vectorizer = CountVectorizer(vocabulary=vocab.get_itos())
+
+    def encode_props(self, data):
+        self.create_vectorizer()
+        data["props"] = self.vectorizer.transform(data["props"]).todense()
+
+
+def split_texts(dataset):
+    for text in dataset:
+        yield text.split()  # re.sub('[^A-Za-z ]+', '', text).split()
+
+
+def create_vocab(data):
+    vocab = build_vocab_from_iterator(split_texts(data["props"]), specials=["<unk>"])
+    vocab.set_default_index(vocab["<unk>"])
+    return vocab
 
 
 if __name__ == "__main__":
     path_to_json = "data//products//agora_hack_products.json"
     out_path = "data//products//agora_hack_products.csv"
     p = Preprocessor()
-    #data = p.preprocess_dataset(path_to_json, out_path)
+    # data = p.preprocess_dataset(path_to_json, out_path)
     data = pd.read_csv("E:\E\Copy\PyCharm\AgoraHack\data\products\cleaned_data_time.csv", index_col="Unnamed: 0").dropna()
-    p.transform_classes(data, "data//products//classes.csv", "data//products//product_data.csv")
+    # p.encode_props(data)
+    # p.transform_classes(data, "data//products//classes_example.csv")
+    print(data.head())
