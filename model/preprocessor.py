@@ -51,8 +51,8 @@ def string_to_list(s):
 class Preprocessor:
     DIR_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    def __init__(self):
-        pass
+    def __init__(self, text_vectorizer = None):
+        self.text_vectorizer = text_vectorizer
 
     def preprocess(self, products):
         """ [product = {
@@ -62,7 +62,11 @@ class Preprocessor:
           }, ...]"""
         products = pd.json_normalize(products)
         products["props"] = str(products["props"])
-        return products.to_numpy()
+        #products["props"] = np.array(re.sub("[^а-яА-Яa-zA-Z0-9]", " ", text).split() for text in products["props"].to_numpy())
+        products["name"] = np.array(re.sub("[^а-яА-Яa-zA-Z0-9]", " ", text).split() for text in products["name"].to_numpy())
+        if self.text_vectorizer:
+            #products["props"] = self.text_vectorizer.vectorize_texts(products["props"])
+            return self.text_vectorizer.vectorize_texts(products["name"])
 
     def dataset_to_csv(self, in_path, out_path):
         # output: data with columns, target column class with class numbers, array where [i] -> name of class number i

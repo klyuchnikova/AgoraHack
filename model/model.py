@@ -1,12 +1,13 @@
-import os
+import os, re
+import pickle
 import numpy as np
+import pandas as pd
 from keras.models import load_model
 from keras.preprocessing.text import Tokenizer
 from keras_preprocessing.sequence import pad_sequences
 from keras.models import Sequential
 from keras.layers import Dense, Flatten, Conv2D
 from keras.layers import Embedding
-
 
 class BasicKerasModel:
     DIR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.path.normpath("..//data//models"))
@@ -71,5 +72,41 @@ class ProductModel(nn.Module):
 """
 
 class TextVectorizer:
+    DIR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.path.normpath("..//data//transformers"))
     def __init__(self):
-        pass
+        self.tokenizer = None
+        self.max_words = 20000
+        self.max_length = 500
+
+    def parse_texts(self, texts):
+        return [re.sub('[^A-Za-z0-9 ]+', '', text) for text in texts]
+
+    def train_on_data_and_save(self, data, fname = "tokenizer.pickle"):
+        fpath = os.path.join(self.DIR_PATH, os.path.normpath(fname))
+        # absolute path
+        x1 = self.parse_texts(data["name"].to_numpy())
+        x2 = self.parse_texts(data["props"].to_numpy())
+        self.tokenizer = Tokenizer(num_words=self.max_words)
+        self.tokenizer.fit_on_texts(x1)
+        self.tokenizer.fit_on_texts(x2)
+
+        with open(fpath, 'wb') as handle:
+            pickle.dump(self.tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def load(self, fpath = "tokenizer.pickle"):
+        fpath = os.path.join(self.DIR_PATH, os.path.normpath(fpath))
+        with open(fpath, 'rb') as handle:
+            self.tokenizer = pickle.load(handle)
+
+    def vectorize_texts(self, texts):
+        sequences = self.tokenizer.texts_to_sequences(texts)
+        return pad_sequences(sequences, maxlen=self.max_length)
+
+if __name__ == "__main__":
+    vectorizer = TextVectorizer()
+    """
+    data = pd.read_csv("E:\E\Copy\PyCharm\AgoraHack\data\products\cleaned_data_time.csv", index_col="Unnamed: 0").dropna()
+    vectorizer.train_on_data_and_save(data)
+    """
+    vectorizer.load()
+    print(vectorizer.vectorize_texts(["Наушники Xiaomi Buds 3 Black"]))

@@ -1,12 +1,17 @@
 import numpy as np
 import pandas as pd
-import os
+import os, pickle
 import sklearn.preprocessing
 
 class ClassEncoder:
     def __init__(self, class_ids_path):
         self.class_ids_path = os.path.normpath(class_ids_path)
-        self.classes = pd.read_csv(self.class_ids_path, index_col="id")
+        if os.path.splitext(self.class_ids_path)[-1] == ".csv":
+            self.classes = pd.read_csv(self.class_ids_path, index_col="id")
+        else:
+            with open(class_ids_path, 'rb') as handle:
+                self.classes = list(pickle.load(handle))[0]
+                self.classes = pd.DataFrame().assign(reference_id = self.classes)
         self.number_classes = self.classes.shape[0]
         self.enc = sklearn.preprocessing.OneHotEncoder()
         self.enc.fit(self.classes)
